@@ -1,0 +1,131 @@
+Toyota 5S-FE ECU Pinout
+=======================
+Terminals of Engine ECU
+
+Connects to: ESP32 Sensor Module (192.168.4.20, UDP 5001)
+Voltage dividers: 5.6K+10K (0.641x) on all ECU signal taps
+
+CONNECTOR E01 (Top Row)
+------------------------
+E01     - POWER GROUND
+E02     - POWER GROUND
+No.10   - INJECTOR
+No.20   - INJECTOR
+STA     - STARTER SWITCH
+IGT     - IGNITER
+E1      - ENGINE GROUND
+NSW     - NEUTRAL START SWITCH
+EGR     - EGR VSV
+ISCC    - ISC VALVE
+ISCO    - ISC VALVE
+OX1     - OXYGEN SENSOR
+
+CONNECTOR E02 (Bottom Row)
+---------------------------
+G⇔     - DISTRIBUTOR
+E21     - SENSOR GROUND
+G1      - DISTRIBUTOR
+NE      - DISTRIBUTOR
+IGF     - IGNITER                              → ESP32 GPIO 26 (digital interrupt, RISING)
+T       - CHECK CONNECTOR
+IDL     - THROTTLE POSITION
+THA     - AIR TEMP. SENSOR
+VC      - VACUUM SENSOR / THROTTLE POSITION SENSOR
+PIM     - VACUUM SENSOR (MAP)                  → ESP32 GPIO 32 (ADC1_CH4, 5.6K+10K divider)
+PSW     - THROTTLE POSITION SENSOR
+THW     - WATER TEMP. SENSOR (ECT)             → ESP32 GPIO 33 (ADC1_CH5, 5.6K+10K divider)
+E2      - SENSOR GROUND
+
+RIGHT SIDE TERMINALS
+---------------------
+ACA     - A/C AMPLIFIER
+OSFC    - OVER SPEED FUEL CUT TERMINAL
+B/K     - STOP LIGHT SWITCH
+ACT     - A/C AMPLIFIER
+ELS     - HEADLIGHT and DEFOGGER
+SPD     - SPEED SENSOR                         → ESP32 GPIO 25 (digital interrupt, FALLING)
+FC      - CIRCUIT OPENING RELAY
+A/C     - A/C MAGNET SWITCH
+VF      - CHECK CONNECTOR
+BATT    - BATTERY
+W       - WARNING LIGHT
++B1     - MAIN RELAY
++B      - MAIN RELAY
+
+SENSOR / SIGNAL SUMMARY
+------------------------
+E01, E02, E1    - Power / Engine ground
+E2, E21         - Sensor ground
+No.10, No.20    - Injectors
+STA             - Starter switch
+IGT, IGF        - Igniter          → IGF on GPIO 26 (RPM sensing)
+NSW             - Neutral start switch
+EGR             - EGR VSV
+ISCC, ISCO      - ISC valve
+OX1             - Oxygen sensor
+G⇔, G1, NE     - Distributor (crank angle / RPM)
+T, VF           - Check connector
+IDL, PSW        - Throttle position sensor
+THA             - Air temperature sensor
+VC              - Vacuum sensor / Throttle position sensor supply
+PIM             - Vacuum sensor (MAP)           → GPIO 32
+THW             - Water temperature sensor (ECT) → GPIO 33
+ACA, ACT        - A/C amplifier
+OSFC            - Over speed fuel cut
+B/K             - Stop light switch
+ELS             - Headlight and defogger
+SPD             - Speed sensor                   → GPIO 25
+FC              - Circuit opening relay
+A/C             - A/C magnet switch
+BATT            - Battery
+W               - Warning light
++B, +B1         - Main relay supply voltage
+
+--- ESP32 Pin Assignments (Sensor Module) ---
+
+ESP32 PIN   ECU SIGNAL    TYPE              NOTES
+─────────────────────────────────────────────────────────────
+GPIO 32     PIM (MAP)     ADC1_CH4 (analog) 5.6K+10K divider, 0-5V→0-3.3V
+GPIO 33     THW (ECT)     ADC1_CH5 (analog) 5.6K+10K divider, 0-5V→0-3.3V
+GPIO 34     VTA (TPS)     ADC1_CH6 (analog) 5.6K+10K divider, 0-5V→0-3.3V
+GPIO 25     SPD           Digital in (int)  5.6K+10K divider, FALLING edge
+GPIO 26     IGf (RPM)     Digital in (int)  5.6K+10K divider, RISING edge
+GPIO 13     Driver door   Digital in pullup GND-switch + 1K series + 10K pullup
+GPIO 14     Passenger dr  Digital in pullup GND-switch + 1K series + 10K pullup
+GPIO 27     Trunk         Digital in pullup GND-switch + 1K series + 10K pullup
+GPIO 21     Hood          Digital in pullup GND-switch + 1K series + 10K pullup
+GPIO 16     (free)        UART2 RX          Freed up for GPS / fingerprint / etc.
+
+--- Free ESP32 Pins (Available for Future Use) ---
+
+GPIO       ALT FUNCTIONS                NOTES
+─────────────────────────────────────────────────────────────
+GPIO 0     ADC2, Touch T1               Avoid: strapping pin (boot mode)
+GPIO 15    ADC2, Touch T3               Avoid: strapping pin (boot mode)
+GPIO 2     ADC2, Touch T2               Avoid: strapping pin (boot mode)
+GPIO 4     ADC2, Touch T0               ⚠️ ADC2 blocked when WiFi active
+GPIO 5                             
+GPIO 12    ADC2, Touch T5               ⚠️ ADC2 blocked when WiFi active
+GPIO 17    UART2 TX                      Free — pair with GPIO 16 if using UART2
+GPIO 18                             
+GPIO 19                             
+GPIO 21                             
+GPIO 22                             
+GPIO 23                             
+GPIO 35    ADC1_CH7, input-only          Safe ADC1 pin (analog input only)
+GPIO 36    ADC1_CH0 (aka VP)             Safe ADC1 pin
+GPIO 37    ADC1_CH1                      Not broken out on many boards
+GPIO 38    ADC1_CH2                      Not broken out on many boards
+GPIO 39    ADC1_CH3 (aka VN)             Safe ADC1 pin
+
+--- ESP32 Feature Reference ---
+
+ADC1 (WiFi-safe analog):   32, 33, 34, 35, 36, 37, 38, 39
+ADC2 (blocked by WiFi):    0, 2, 4, 12, 13, 14, 15, 25, 26, 27
+Touch:                     T0=4, T1=0, T2=2, T3=15, T4=13, T5=12, T6=14, T7=27, T8=33, T9=32
+DAC:                       DAC1=25, DAC2=26
+UART2:                     RX=16, TX=17
+Input-only:                34, 35, 36, 39
+Strapping (caution):       0 (boot), 2 (boot), 5 (CS), 12 (voltage), 15 (silence)
+
+

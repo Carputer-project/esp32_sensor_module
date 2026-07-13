@@ -1,0 +1,202 @@
+VOLTAGE DIVIDER CIRCUIT — ECU Tap → ESP32 (3.3V Safe)
+========================================================
+
+Scales:    0-5V ECU signal → 0-3.3V ESP32 ADC input
+Ratio:     10K / (5.6K + 10K) = 0.641x
+Max input: 5V × 0.641 = 3.21V ✅ (safe under 3.3V abs max)
+
+
+CIRCUIT (per sensor, repeat where needed)
+------------------------------------------
+
+    ECU Signal (0-5V)
+           │
+           │
+           ┌┴┐
+            │R1│  5.6KΩ  (1/4W)
+           └┬┘
+            │
+            ├─────────────► ESP32 GPIO
+            │               (analog or digital input)
+           ┌┴┐
+            │R2│  10KΩ
+           └┬┘
+           │
+           │
+          ═══ GND
+
+
+WIRING DIAGRAM
+----------------
+
+2  ECU Pin         Divider        ESP32
+  ───────         ───────        ─────
+    PIM  (MAP)  ──┬─5.6K──┬───── GPIO 32  (analog, ADC1_CH4)
+                  │      10K
+                 │      │
+                 │    GND
+                 │
+    THW  (ECT)  ──┬─5.6K──┬───── GPIO 33  (analog, ADC1_CH5)
+                  │      10K
+                 │      │
+                 │    GND
+                 │
+    VTA  (TPS)  ──┬─5.6K──┬───── GPIO 34  (analog, ADC1_CH6)
+                  │      10K
+                 │      │
+                 │    GND
+
+    SPD  (Speed)──┬─5.6K──┬───── GPIO 25  (digital pulse, FALLING int)
+                  │      10K
+                 │      │
+                 │    GND
+
+    IGf  (RPM)  ──┬─5.6K──┬───── GPIO 26  (digital pulse, RISING int)
+                  │      10K
+                 │      │
+                 │    GND
+
+
+
+FUEL LEVEL & OIL PRESSURE SENDERS (120Ω pullup to 3.3V)
+--------------------------------------------------------
+  The factory sender provides a variable resistance to GND (chassis ground).
+  We feed 3.3V through a 120Ω resistor to the sender wire, forming a
+  voltage divider. The ADC reads the voltage at the junction.
+  This does NOT disturb the factory dash gauge.
+
+  ═══ FUEL LEVEL ═══
+
+  Sender: ~3Ω (full)  →  ~110Ω (empty)
+
+  ESP32 3.3V ──── 120Ω ────┬──── GPIO 35 (ADC1_CH7)
+                           │
+                   fuel sender terminal (variable R to chassis GND)
+
+  ═══ OIL PRESSURE ═══
+
+  Sender: ~3Ω (0 psi)  →  ~100Ω (100 psi)
+
+  ESP32 3.3V ──── 120Ω ────┬──── GPIO 36 / VP (ADC1_CH0)
+                           │
+                  oil pressure sender terminal (variable R to chassis GND)
+
+  ═══ VOLTAGE TABLE ═══
+
+  Fuel:
+    3Ω  (full)  →  0.08V  →  ADC ~10    →  fw sends ~1%
+    30Ω          →  0.79V  →  ADC ~982   →  fw sends ~25%
+    55Ω          →  1.26V  →  ADC ~1565  →  fw sends ~50%
+    80Ω          →  1.54V  →  ADC ~1915  →  fw sends ~75%
+    110Ω (empty) →  1.72V  →  ADC ~2138  →  fw sends ~99%
+
+  Oil pressure:
+    3Ω   (0 psi)   →  0.08V  →  ADC ~10    →  fw sends ~1%
+    25Ω            →  0.69V  →  ADC ~856   →  fw sends ~22%
+    50Ω            →  1.18V  →  ADC ~1465  →  fw sends ~48%
+    75Ω            →  1.49V  →  ADC ~1845  →  fw sends ~74%
+    100Ω (100 psi) →  1.66V  →  ADC ~2060  →  fw sends ~99%
+
+  ═══ NOTES ═══
+  - GPIO 39 (VN) unused: wire a 10K resistor to GND to stop ADC crosstalk
+  - Sender body/shell = chassis GND = ESP32 GND (common ground)
+  - 120Ω value chosen for best voltage spread across the expected range
+
+
+DOOR SENSORS (GND-switch, direct to ESP32)
+----------------------------------------------
+  The door switch connects directly to GND when open.
+  No dome light circuit involved — clean 0/3.3V logic.
+
+  ═══ WIRING ═══
+
+  Door switch ── 10KΩ (series, 1/4W) ──── GPIO (INPUT_PULLUP)
+
+  Door OPEN  = switch closed to GND → GPIO = LOW
+  Door CLOSED = switch open → GPIO pulled HIGH by internal pullup
+
+  The 10K is protection-only (ESD/wrong-wire). ESP32 internal pullup
+  (~45K to 3.3V) handles the pullup — no external pullup needed.
+
+  ═══ PER DOOR ═══
+
+  GPIO 13 ── 10K ── Driver door switch  (INPUT_PULLUP)
+  GPIO 14 ── 10K ── Passenger door switch (INPUT_PULLUP)
+  GPIO 27 ── 10K ── Trunk switch         (INPUT_PULLUP)
+  GPIO 21 ── 10K ── Hood switch          (INPUT_PULLUP)
+
+
+POWER
+------
+  ECU +B (12V) ──► DC-DC converter (set to 3.3V) ──► ESP32 VIN
+  ECU E2 (GND) ──► ESP32 GND (common ground)
+
+  NOTE: Do NOT load the ECU's internal 5V regulator.
+        Use a dedicated DC-DC converter from 12V.
+
+
+DTC READER CIRCUIT
+-------------------
+T/VF input (ECU diagnostic output, normally 5V, pulled low for MIL blinks):
+
+    T/VF  ──┬─5.6K──┬───── GPIO 19  (digital input, change detection)
+            │      10K
+            │      │
+            │    GND
+
+TE1/TE2 control (GPIO → 2N2222 NPN → open-drain to ECU ground):
+
+    GPIO 22 ──┬─1K──┬─base 2N2222   TE1 → collector →┐
+               │     │  emitter → GND                ├── E1 (ECU ground)
+    GPIO 23 ──┬─1K──┬─base 2N2222   TE2 → collector →┘
+               │     │  emitter → GND
+               │     │
+              GND   GND
+
+
+PARTS LIST
+-----------
+  5.6KΩ  1/4W resistors  × 6  (R1 for each divider: 5 analog + 1 T/VF)
+  10KΩ  1/4W resistors  × 6  (R2 for each divider: 5 analog + 1 T/VF)
+   1KΩ  1/4W resistors  × 6  (series protection: 4 doors + 2 TE switches)
+  10KΩ  1/4W resistors  × 5  (pullup: 4 doors + 1 for GPIO 39 VN fix)
+  120Ω  1/4W resistors  × 2  (fuel level + oil pressure senders)
+  2N2222 NPN transistors   × 2  (TE1/TE2 open-drain switches)
+  DC-DC converter (adjustable, set to 3.3V) × 1
+  ESP32 dev board × 1
+  Protoboard
+  Cat5 cable (or individual wires)
+  Heat shrink tubing
+
+
+FIRMWARE UPDATE (already applied to main.cpp)
+----------------------------------------------
+  - Pins remapped: PIM→32, THW→33, VTA→34, SPD→25, IGf→26
+  - Doors: DRIVER→13, PASSENGER→14, TRUNK→27, HOOD→21
+  - Fuel level: GPIO 35 (ADC1_CH7), 120Ω pullup to 3.3V
+  - Oil pressure: GPIO 36 / VP (ADC1_CH0), 120Ω pullup to 3.3V
+  - NTC formula uses ECU 2.2K pullup to 5V (reversed through divider)
+  - RPM counted from IGf pulses (4-cyl: 2 sparks/rev)
+  - MAP and throttle reported as 0-100%
+  - Door logic: 1=open, 0=closed (LOW when switch closed to GND)
+  - DTC: TE1→22, TE2→23, T/VF→19 (10K+18K divider, 3.21V max)
+  - DTC state machine in main.cpp: normal mode + test mode, blink decoder
+  - DTC responses on UDP 5003, commands on UDP 5002
+
+
+TEST PROCEDURE
+---------------
+  1. With key ON, engine OFF, measure at ECU pin:
+     - PIM: ~3.5-4.5V (atmospheric)
+     - THW: ~2.0-2.5V (cold engine ~68°F)
+     - VTA: ~0.5V (throttle closed)
+
+  2. Measure AFTER divider at ESP32 GPIO:
+      - Should be ~0.643 × ECU pin voltage (10K+18K divider)
+      - T/VF: idle ~4.5-5V → ESP32 GPIO 19 ~2.9-3.21V
+
+  3. ESP32 serial output should show:
+     - coolant: ~180-220°F when warm
+     - rpm: idle ~700-900
+     - map: idle ~15-25%, key-on ~100%
+     - throttle: closed ~0%, WOT ~100%

@@ -1,0 +1,113 @@
+ESP-32 Pinout Reference (WiFi+BT SoC, ISM2.4G 802.11 b/g/n)
+=============================================================
+
+LEFT SIDE (Top to Bottom)
+--------------------------
+GPIO36  - SENSOR_VP  / AD1_0          (input only)
+GPIO39  - SENSOR_VN  / AD1_3          (input only)
+GPIO34  - A6                          (input only)
+GPIO35  - A7                          (input only)
+GPIO32  - A4
+GPIO33  - A5
+GPIO25  - A8  / DAC1 / AD2_8
+GPIO26  - A9  / DAC2 / AD2_9
+GPIO27  - T7  / AD2_7
+GPIO14  - T6  / AD2_6 / SD_CLK
+GPIO12  - T5  / AD2_5 / SD_D2
+GPIO13  - T4  / AD2_4 / SD_D3
+GND
+VIN     - 5V input
+
+RIGHT SIDE (Top to Bottom)
+---------------------------
+GPIO23  - D23
+GPIO22  - D22
+GPIO01  - TXO / TX0
+GPIO03  - RXO / RX0
+GPIO21  - D21
+GPIO19  - D19
+GPIO18  - D18
+GPIO05  - D5
+GPIO17  - TX2
+GPIO16  - RX2
+GPIO04  - D4  / T0  / AD2_0 / SD_D1
+GPIO02  - D2  / T2  / AD2_2 / SD_D0
+GPIO15  - D15 / T3  / AD2_3 / SD_CMD
+GND
+3.3V    - 3.3V output
+
+TOP PINS
+--------
+EN      - Enable (reset)
+VP      - SENSOR_VP / GPIO36
+VN      - SENSOR_VN / GPIO39
+
+BOTTOM BUTTONS
+--------------
+EN      - Enable / Reset button
+BOOT    - Boot mode button
+
+POWER
+-----
+VIN     - 5V input
+3.3V    - 3.3V output
+GND     - Ground
+
+ADC CHANNELS
+-------------
+ADC1 (safe to use with WiFi):
+  AD1_0  - GPIO36 (SENSOR_VP)
+  AD1_3  - GPIO39 (SENSOR_VN)
+  A6     - GPIO34
+  A7     - GPIO35
+  A4     - GPIO32
+  A5     - GPIO33
+
+ADC2 (conflicts with WiFi when active):
+  A8  / AD2_8  - GPIO25
+  A9  / AD2_9  - GPIO26
+  T7  / AD2_7  - GPIO27
+  T6  / AD2_6  - GPIO14
+  T5  / AD2_5  - GPIO12
+  T4  / AD2_4  - GPIO13
+  T0  / AD2_0  - GPIO04
+  T2  / AD2_2  - GPIO02
+  T3  / AD2_3  - GPIO15
+
+DAC OUTPUT
+----------
+DAC1  - GPIO25
+DAC2  - GPIO26
+
+TOUCH PINS
+----------
+T0  - GPIO04
+T2  - GPIO02
+T3  - GPIO15
+T4  - GPIO13
+T5  - GPIO12
+T6  - GPIO14
+T7  - GPIO27
+
+UART
+----
+UART0  - TX0=GPIO01, RX0=GPIO03  (USB/debug serial)
+UART2  - TX2=GPIO17, RX2=GPIO16
+
+SD CARD
+-------
+SD_CLK  - GPIO14
+SD_D2   - GPIO12
+SD_D3   - GPIO13
+SD_D1   - GPIO04
+SD_D0   - GPIO02
+SD_CMD  - GPIO15
+
+NOTES
+-----
+- GPIO34, 35, 36, 39 are INPUT ONLY — no output, no internal pull-up/down
+- ADC2 pins cannot be used when WiFi is active
+- GPIO0 and GPIO2 affect boot mode — use with care
+- GPIO01 and GPIO03 are USB serial — avoid for other use while programming
+- EN button resets the board
+- BOOT button held on reset = flash mode

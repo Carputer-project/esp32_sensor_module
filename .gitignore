@@ -1,0 +1,6 @@
+.pio/
+__pycache__/
+*.pyc
+pcb/pcbbackup/
+pcb/sensormodule final-backups/
+pcb/fp-info-cache
